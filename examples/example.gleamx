@@ -3,7 +3,22 @@ import lustre/element.{type Element}
 import lustre/element/html
 
 
+pub fn login_page(valid valid: Bool) -> Element(t) {
+  form_page(
+    "Login", "/login",
+    fields: [
+      input(name: "email"   , is: "text"    , valid:),
+      input(name: "password", is: "password", valid:),
+    ],
+    buttons: [
+      <? <a class="button" href="/signup"> text("Sign Up") </a>,
+      submit_button("Login"),
+    ]
+  )
+}
+
 fn form_page(
+  title: String,
   action: String,
   fields fields: List(Element(t)),
   buttons buttons: List(Element(t)),
@@ -12,15 +27,18 @@ fn form_page(
   page(
     <? <form method="POST" action={action}>
       <div class="fields"> ..fields </div>
-      <div class="buttons"> ..buttons </div>
+      <div class="buttons">
+        text("just a test to show spreading")
+        ..buttons
+      </div>
     </form>
   )
 }
 
-fn page(elements: List(Element(t))) -> Element(t) {
+fn page(title: String, elements: List(Element(t))) -> Element(t) {
   <? <html>
     <head>
-      <title> {"TV Suggest"} </title>
+      <title> {title} </title>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <link rel="stylesheet" href="/static/app.css">
     </head>
