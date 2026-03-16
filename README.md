@@ -4,7 +4,7 @@
 gleam add --dev gleamx
 ```
 
-*JSX-like preprocessor for gleam.*
+**JSX-like preprocessor for gleam.**
 
 just end your files with `.gleamx` and run `gleam run -m gleamx` to compile all `.gleamx` files in `src` folder to plain `gleam` files
 
