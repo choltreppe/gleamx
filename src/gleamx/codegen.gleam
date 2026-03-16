@@ -1,6 +1,7 @@
 import gleam/list
+import gleam/result.{try}
 import gleam/string.{length}
-import gleamx/ast.{type Ast, type Chunk}
+import gleamx/ast.{type Ast, type Chunk, type SyntaxError, SyntaxError}
 import gleamx/lineinfo.{type LineInfo}
 
 pub type SourceMap =
@@ -9,54 +10,77 @@ pub type SourceMap =
 type SourceMapEntry =
   #(Int, LineInfo)
 
-pub fn generate(chunks: List(Chunk)) -> #(String, SourceMap) {
-  list.fold(chunks, #("", []), fn(acc, chunk) {
-    let #(code, source_map) = acc
+pub fn generate(
+  chunks: List(Chunk),
+) -> Result(#(String, SourceMap), SyntaxError) {
+  list.fold(chunks, Ok(#("", [])), fn(acc, chunk) {
+    use #(code, source_map) <- try(acc)
     case chunk {
-      ast.GleamCode(pos:, code: new_code) -> #(code <> new_code, [
-        #(length(code), pos),
-        ..source_map
-      ])
+      ast.GleamCode(pos:, code: new_code) ->
+        Ok(#(code <> new_code, [#(length(code), pos), ..source_map]))
       ast.GlxCode(ast:) -> {
-        let #(code, new_source_map) = generate_from_glx(code, ast)
-        #(code, list.append(new_source_map, source_map))
+        use #(code, new_source_map) <- try(generate_from_glx(code, ast))
+        Ok(#(code, list.append(new_source_map, source_map)))
       }
     }
   })
 }
 
-fn generate_from_glx(code: String, ast: Ast) -> #(String, SourceMap) {
+fn generate_from_glx(
+  code: String,
+  ast: Ast,
+) -> Result(#(String, SourceMap), SyntaxError) {
   let mapping = #(length(code), ast.pos)
   case ast {
     ast.VoidElement(tag:, args:, ..) -> {
       let code = code <> "html." <> tag <> "(["
       let #(code, source_map) = generate_args(code, args)
-      #(code <> "])", [mapping, ..source_map])
+      Ok(#(code <> "])", [mapping, ..source_map]))
     }
     ast.ContainerElement(tag:, args:, children:, ..) -> {
       let code = code <> "html." <> tag <> "(["
       let #(code, args_source_map) = generate_args(code, args)
       let code = code <> "],"
-      let #(code, children_source_map) = case children {
+      use #(code, children_source_map) <- try(case children {
         [ast.Spread(children: child, ..)] -> generate_from_glx(code, child)
-        _ -> {
-          let #(code, source_map) =
-            list.fold(children, #(code <> "[", [mapping]), fn(acc, child) {
-              let #(code, source_map) = acc
-              let #(code, new_mappings) = generate_from_glx(code, child)
-              #(code <> ",", list.append(new_mappings, source_map))
-            })
-          #(code <> "]", source_map)
-        }
-      }
+        _ ->
+          case list.contains(ast.textual_elements, tag) {
+            True ->
+              case children {
+                [ast.CodeBlock(..) as child] -> generate_from_glx(code, child)
+                _ ->
+                  Error(SyntaxError(
+                    pos: ast.pos,
+                    msg: tag
+                      <> " elements should only contain exactly one text child",
+                  ))
+              }
+            False -> {
+              use #(code, source_map) <- try(
+                list.fold(
+                  children,
+                  Ok(#(code <> "[", [mapping])),
+                  fn(acc, child) {
+                    use #(code, source_map) <- try(acc)
+                    use #(code, new_mappings) <- try(generate_from_glx(
+                      code,
+                      child,
+                    ))
+                    Ok(#(code <> ",", list.append(new_mappings, source_map)))
+                  },
+                ),
+              )
+              Ok(#(code <> "]", source_map))
+            }
+          }
+      })
       let code = code <> ")"
-      #(code, list.append(children_source_map, args_source_map))
+      Ok(#(code, list.append(children_source_map, args_source_map)))
     }
 
     ast.Spread(children:, ..) -> generate_from_glx(code <> "..", children)
 
-    ast.Variable(name: v, ..) | ast.Call(def: v, ..) -> #(code <> v, [mapping])
-    ast.Block(body:, ..) -> #(code <> "{" <> body <> "}", [mapping])
+    ast.CodeBlock(gleam_code:, ..) -> Ok(#(code <> gleam_code, [mapping]))
   }
 }
 

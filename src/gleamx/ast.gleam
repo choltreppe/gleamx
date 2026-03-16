@@ -16,13 +16,34 @@ pub type Ast {
     children: List(Ast),
   )
   Spread(pos: LineInfo, children: Ast)
-  Variable(pos: LineInfo, name: String)
-  Block(pos: LineInfo, body: String)
-  Call(pos: LineInfo, def: String)
+  CodeBlock(pos: LineInfo, gleam_code: String)
 }
 
 pub type Arg {
   BoolArg(pos: LineInfo, name: String)
   LitArg(pos: LineInfo, name: String, value: String)
   ExprArg(pos: LineInfo, name: String, value: String)
+}
+
+pub const void_elements = [
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]
+
+pub const textual_elements = ["option", "script", "style", "textarea", "title"]
+
+pub type SyntaxError {
+  SyntaxError(pos: LineInfo, msg: String)
 }

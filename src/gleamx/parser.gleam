@@ -1,12 +1,8 @@
 import gleam/list
 import gleam/result.{try}
 import gleam/string.{crop, drop_start, first, length, slice}
-import gleamx/ast.{type Arg, type Ast, type Chunk}
-import gleamx/lineinfo.{type CodeMeta, type LineInfo, analyze_code, line_info}
-
-pub type SyntaxError {
-  SyntaxError(pos: LineInfo, msg: String)
-}
+import gleamx/ast.{type Arg, type Ast, type Chunk, type SyntaxError, SyntaxError}
+import gleamx/lineinfo.{type CodeMeta, analyze_code, line_info}
 
 type Parsed(t) {
   Parsed(code: String, value: t)
@@ -44,27 +40,37 @@ fn parse_element(
 ) -> Result(Parsed(Ast), SyntaxError) {
   let code = skip_spaces(code)
   case code {
+    "" -> Error(syntax_error(code, meta, "unexpected EOF"))
+
     "<" <> code -> {
       let code = skip_spaces(code)
       let pos = line_info(code, meta)
-      let Parsed(code:, value: tag) = parse_until(code, [" ", "/", ">"])
+      let Parsed(code:, value: tag) =
+        parse_until(code, ["/", ">", ..whitespace_chars])
       use Parsed(code:, value: args) <- try(parse_args(code, meta))
       let code = skip_spaces(code)
       case code {
         "/>" <> code ->
-          Ok(Parsed(code:, value: ast.VoidElement(pos:, tag:, args:)))
-        ">" <> code -> {
-          parse_children(code, tag, meta)
-          |> map_parse_result(fn(children) {
-            ast.ContainerElement(
-              pos: line_info(code, meta),
-              tag:,
-              args:,
-              children:,
-            )
-          })
-        }
-        _ -> panic
+          Ok(Parsed(
+            code:,
+            value: ast.ContainerElement(pos:, tag:, args:, children: []),
+          ))
+        ">" <> code ->
+          case list.contains(ast.void_elements, tag) {
+            True -> Ok(Parsed(code:, value: ast.VoidElement(pos:, tag:, args:)))
+            False -> {
+              parse_children(code, tag, meta)
+              |> map_parse_result(fn(children) {
+                ast.ContainerElement(
+                  pos: line_info(code, meta),
+                  tag:,
+                  args:,
+                  children:,
+                )
+              })
+            }
+          }
+        _ -> Error(syntax_error(code, meta, "expected '>' or '/>'"))
       }
     }
 
@@ -74,29 +80,29 @@ fn parse_element(
         ast.Spread(pos: line_info(code, meta), children:)
       })
 
-    "{" <> code ->
+    "{" <> _ ->
       parse_block(code, meta, "{", "}")
-      |> map_parse_result(fn(body) {
-        ast.Block(pos: line_info(code, meta), body:)
+      |> map_parse_result(fn(gleam_code) {
+        ast.CodeBlock(pos: line_info(code, meta), gleam_code:)
       })
 
     _ -> {
       let Parsed(code:, value: name) =
         parse_until(code, ["(", ..whitespace_chars])
       case code {
-        "(" <> code -> {
+        "(" <> _ -> {
           parse_block(code, meta, "(", ")")
           |> map_parse_result(fn(params) {
-            ast.Call(
+            ast.CodeBlock(
               pos: line_info(code, meta),
-              def: name <> "(" <> params <> ")",
+              gleam_code: name <> params,
             )
           })
         }
         _ ->
           Ok(Parsed(
             code:,
-            value: ast.Variable(pos: line_info(code, meta), name:),
+            value: ast.CodeBlock(pos: line_info(code, meta), gleam_code: name),
           ))
       }
     }
@@ -139,7 +145,8 @@ fn parse_args(
   case first(code) {
     Ok(">") | Ok("/") -> Ok(Parsed(code:, value: []))
     _ -> {
-      let Parsed(code:, value: name) = parse_until(code, ["=", " ", "/", ">"])
+      let Parsed(code:, value: name) =
+        parse_until(code, ["=", "/", ">", ..whitespace_chars])
       let code = skip_spaces(code)
       case code {
         "=" <> code -> {
@@ -152,7 +159,7 @@ fn parse_args(
                 [ast.LitArg(pos: line_info(code, meta), name:, value:), ..args]
               })
             }
-            "{" <> code -> {
+            "{" <> _ -> {
               use Parsed(code:, value:) <- try(parse_block(code, meta, "{", "}"))
               parse_args(code, meta)
               |> map_parse_result(fn(args) {
@@ -177,8 +184,7 @@ fn parse_block(
   use new_code <- try(parse_block_scan(code, meta, open, close, 0))
   Ok(Parsed(
     code: new_code,
-    value: slice(code, 0, length(code) - length(new_code) - 1),
-    // -1 to not include closing '}'
+    value: slice(code, 0, length(code) - length(new_code)),
   ))
 }
 
@@ -194,7 +200,7 @@ fn parse_block_scan(
     Error(_) ->
       Error(syntax_error(rest, meta, "unexpected EOF before closing the block"))
     Ok(x) if x == open -> parse_block_scan(rest, meta, open, close, depth + 1)
-    Ok(x) if x == close && depth > 0 ->
+    Ok(x) if x == close && depth > 1 ->
       parse_block_scan(rest, meta, open, close, depth - 1)
     Ok(x) if x == close -> Ok(rest)
     _ -> parse_block_scan(rest, meta, open, close, depth)
