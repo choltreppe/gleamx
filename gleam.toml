@@ -3,7 +3,7 @@ version = "1.0.0"
 
 description = "JSX-like syntax for gleam"
 licences = ["MIT"]
-# repository = { type = "github", user = "", repo = "" }
+repository = { type = "github", user = "choltreppe", repo = "gleamx" }
 # links = [{ title = "Website", href = "" }]
 
 [dependencies]
