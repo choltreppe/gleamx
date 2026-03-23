@@ -4,7 +4,7 @@
 packages = [
   { name = "argv", version = "1.0.2", build_tools = ["gleam"], requirements = [], otp_app = "argv", source = "hex", outer_checksum = "BA1FF0929525DEBA1CE67256E5ADF77A7CDDFE729E3E3F57A5BDCAA031DED09D" },
   { name = "filepath", version = "1.1.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "filepath", source = "hex", outer_checksum = "B06A9AF0BF10E51401D64B98E4B627F1D2E48C154967DA7AF4D0914780A6D40A" },
-  { name = "fswalk", version = "3.1.0", build_tools = ["gleam"], requirements = ["gleam_community_path", "gleam_stdlib", "gleam_yielder", "simplifile"], source = "git", repo = "git@github.com:choltreppe/fswalk.git", commit = "6b20fa6153d75ad4b6f9d058d5a727f9977a4ea6" },
+  { name = "fswalk", version = "3.1.1", build_tools = ["gleam"], requirements = ["gleam_community_path", "gleam_stdlib", "gleam_yielder", "simplifile"], otp_app = "fswalk", source = "hex", outer_checksum = "7EE2C76D98A8FB3BDA85617ACBF5B6358A09D65BCB5BDF2978DA40BE3625FD64" },
   { name = "gleam_community_path", version = "0.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_community_path", source = "hex", outer_checksum = "916C2829E2ED81036BBA180CFD5E8633D05E25C304FDF6E3BC8A048459B89725" },
   { name = "gleam_stdlib", version = "0.70.0", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "86949BF5D1F0E4AC0AB5B06F235D8A5CC11A2DFC33BF22F752156ED61CA7D0FF" },
   { name = "gleam_yielder", version = "1.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_yielder", source = "hex", outer_checksum = "8E4E4ECFA7982859F430C57F549200C7749823C106759F4A19A78AEA6687717A" },
@@ -14,7 +14,7 @@ packages = [
 
 [requirements]
 argv = { version = ">= 1.0.2 and < 2.0.0" }
-fswalk = { git = "git@github.com:choltreppe/fswalk.git", ref = "main" }
+fswalk = { version = ">= 3.1.1" }
 gleam_stdlib = { version = ">= 0.44.0 and < 2.0.0" }
 gleam_yielder = { version = ">= 1.1.0 and < 2.0.0" }
 gleeunit = { version = ">= 1.0.0 and < 2.0.0" }
