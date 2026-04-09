@@ -1,10 +1,15 @@
+> [!WARNING]  
+> Gleamx is a new language ontop of Gleam that compiles to gleam.
+> Gleam build tool, compiler, language server, and any other tooling will not work with gleamx
+> and compiler errors will be poor (line and column will not perfectly match .gleamx sourcecode etc.)
+
 # gleamx
 
 ```sh
 gleam add --dev gleamx
 ```
 
-*JSX-like preprocessor for gleam.*
+**JSX-like preprocessor for gleam.**
 
 just end your files with `.gleamx` and run `gleam run -m gleamx` to compile all `.gleamx` files in `src` folder to plain `gleam` files
 
